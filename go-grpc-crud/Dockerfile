@@ -8,7 +8,10 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copiar todo el código
-COPY . .
+COPY cmd/ cmd/
+COPY internal/ internal/
+COPY proto/ proto/
+COPY config/ config/
 
 # Compilar el binario
 RUN CGO_ENABLED=0 GOOS=linux go build -o app ./cmd/server

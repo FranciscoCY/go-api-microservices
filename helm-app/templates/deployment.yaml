@@ -1,0 +1,114 @@
+{{- $root := . -}}
+{{- range $name, $d := $root.Values.deployments }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $name }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "helm-app.labels" $root | nindent 4 }}
+    {{- with $d.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  {{- with $d.replicas }}
+  replicas: {{ . }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- if $d.selectorLabels }}
+{{ toYaml $d.selectorLabels | nindent 6 }}
+      {{- else }}
+        app: {{ $name }}
+      {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "helm-app.labels" $root | nindent 8 }}
+        {{- if $d.selectorLabels }}
+{{ toYaml $d.selectorLabels | nindent 8 }}
+        {{- else }}
+        app: {{ $name }}
+        {{- end }}
+        {{- with $d.podLabels }}
+{{ toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with $d.podAnnotations }}
+      annotations:
+{{ toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      {{- with $d.serviceAccountName }}
+      serviceAccountName: {{ . }}
+      {{- end }}
+      {{- with $d.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $d.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $d.tolerations }}
+      tolerations:
+{{ toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $d.affinity }}
+      affinity:
+{{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $d.containerName | default $name }}
+          image: "{{ $d.image.repository }}:{{ $d.image.tag }}"
+          {{- with $d.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
+          {{- with $d.command }}
+          command:
+{{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $d.args }}
+          args:
+{{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $d.env }}
+          env:
+{{- range $k, $v := . }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+{{- end }}
+          {{- end }}
+          {{- with $d.envFrom }}
+          envFrom:
+{{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $d.ports }}
+          ports:
+{{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $d.resources }}
+          resources:
+{{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $d.volumeMounts }}
+          volumeMounts:
+{{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $d.livenessProbe }}
+          livenessProbe:
+{{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $d.readinessProbe }}
+          readinessProbe:
+{{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $d.startupProbe }}
+          startupProbe:
+{{ toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with $d.volumes }}
+      volumes:
+{{ toYaml . | nindent 8 }}
+      {{- end }}
+---
+{{- end }}

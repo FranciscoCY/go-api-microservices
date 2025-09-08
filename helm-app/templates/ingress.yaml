@@ -1,0 +1,32 @@
+{{- $root := . -}}
+{{- range $ingName, $ing := $root.Values.ingresses }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ $ingName }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "helm-app.labels" $root | nindent 4 }}
+  annotations:
+    {{- range $key, $value := $ing.annotations }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+spec:
+  ingressClassName: {{ $ing.className }}
+  rules:
+  {{- range $rule := $ing.rules }}
+    - host: {{ $rule.host }}
+      http:
+        paths:
+        {{- range $path := $rule.paths }}
+          - path: {{ $path.path }}
+            pathType: {{ $path.pathType }}
+            backend:
+              service:
+                name: {{ $path.service.name }}
+                port:
+                  number: {{ $path.service.port }}
+        {{- end }}
+  {{- end }}
+---
+{{- end }}

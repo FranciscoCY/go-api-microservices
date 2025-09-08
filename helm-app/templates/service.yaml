@@ -1,0 +1,22 @@
+{{- $root := . -}}
+{{- range $svcName, $svc := $root.Values.services }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svcName }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "helm-app.labels" $root | nindent 4 }}
+spec:
+  type: {{ $svc.type | default "ClusterIP" }}
+  selector:
+    {{- toYaml $svc.selector | nindent 4 }}
+  ports:
+  {{- range $port := $svc.ports }}
+    - name: {{ $port.name }}
+      protocol: {{ $port.protocol | default "TCP" }}
+      port: {{ $port.port }}
+      targetPort: {{ $port.targetPort }}
+  {{- end }}
+---
+{{- end }}

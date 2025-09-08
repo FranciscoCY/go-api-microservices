@@ -1,0 +1,67 @@
+{{- $root := . -}}
+{{- range $jobName, $job := $root.Values.jobs }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $jobName }}
+  namespace: {{ $root.Release.Namespace }}
+  labels:
+    {{- include "helm-app.labels" $root | nindent 4 }}
+spec:
+  {{- with $job.backoffLimit }}
+  backoffLimit: {{ . }}
+  {{- end }}
+  {{- with $job.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ . }}
+  {{- end }}
+  {{- with $job.activeDeadlineSeconds }}
+  activeDeadlineSeconds: {{ . }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "helm-app.labels" $root | nindent 8 }}
+        {{- with $job.podLabels }}
+{{ toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with $job.podAnnotations }}
+      annotations:
+{{ toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      restartPolicy: {{ $job.restartPolicy | default "OnFailure" }}
+      containers:
+        - name: {{ $job.containerName | default $jobName }}
+          image: "{{ $job.image.repository }}:{{ $job.image.tag }}"
+          {{- with $job.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
+          {{- with $job.command }}
+          command:
+{{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $job.args }}
+          args:
+{{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $job.env }}
+          env:
+{{- range $k, $v := . }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+{{- end }}
+          {{- end }}
+          {{- with $job.envFrom }}
+          envFrom:
+{{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with $job.volumeMounts }}
+          volumeMounts:
+{{ toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with $job.volumes }}
+      volumes:
+{{ toYaml . | nindent 8 }}
+      {{- end }}
+---
+{{- end }}

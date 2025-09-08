@@ -1,0 +1,139 @@
+secrets:
+  db-secret:
+    POSTGRES_USER: postgres
+    POSTGRES_PASSWORD: postgres
+    POSTGRES_DB: mydb
+  api-secret:
+    API_KEY: "superapikey"
+    API_SECRET: "supersecret"
+
+configMaps:
+  app-config:
+    config.yaml: |
+      database:
+        host: db
+        port: 5432
+        user: postgres
+        password: postgres
+        name: mydb
+        sslmode: disable
+  flyway-scripts:
+    V1__create_users_table.sql: |
+      CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(100) NOT NULL,
+          email VARCHAR(100) UNIQUE NOT NULL
+      );
+
+deployments:
+  postgres:
+    replicas: 1
+    selectorLabels: { app: postgres }
+    image:
+      repository: postgres
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    ports:
+      - name: tcp
+        containerPort: 5432
+    envFrom:
+      - secretRef: { name: db-secret }
+    volumeMounts:
+      - name: postgres-storage
+        mountPath: /var/lib/postgresql/data
+    volumes:
+      - name: postgres-storage
+        emptyDir: {}
+    resources:
+      requests: { cpu: "250m", memory: "256Mi" }
+      limits: { cpu: "1", memory: "1Gi" }
+
+  go-grpc-crud:
+    replicas: 2
+    selectorLabels: { app: go-grpc-crud }
+    image:
+      repository: franciscocy97/go-grpc-crud-app
+      tag: "latest"
+      pullPolicy: IfNotPresent
+    ports:
+      - name: grpc
+        containerPort: 50051
+    envFrom:
+      - configMapRef: { name: app-config }
+      - secretRef: { name: db-secret }
+    volumeMounts:
+      - name: config-volume
+        mountPath: /app/config
+        readOnly: true
+    volumes:
+      - name: config-volume
+        configMap: { name: app-config }
+    resources:
+      requests: { cpu: "100m", memory: "128Mi" }
+      limits: { cpu: "500m", memory: "512Mi" }
+
+hpas:
+  grpc-hpa:
+    targetDeployment: go-grpc-crud
+    minReplicas: 2
+    maxReplicas: 5
+    cpu:
+      targetAverageUtilization: 70
+    memory:
+      targetAverageUtilization: 80
+
+jobs:
+  flyway-migrate:
+    image:
+      repository: flyway/flyway
+      tag: "10"
+      pullPolicy: IfNotPresent
+    command: ["flyway"]
+    args: ["migrate"]
+    env:
+      FLYWAY_URL: "jdbc:postgresql://db:5432/mydb"
+      FLYWAY_USER: "postgres"
+      FLYWAY_PASSWORD: "postgres"
+    volumeMounts:
+      - name: flyway-scripts
+        mountPath: /flyway/sql
+    volumes:
+      - name: flyway-scripts
+        configMap:
+          name: flyway-scripts
+    restartPolicy: OnFailure
+    backoffLimit: 3
+    ttlSecondsAfterFinished: 3600
+
+services:
+  grpc-service:
+    type: ClusterIP
+    selector:
+      app: go-grpc-crud
+    ports:
+      - name: grpc
+        port: 50051
+        targetPort: 50051
+
+  db:
+    type: ClusterIP
+    selector:
+      app: postgres
+    ports:
+      - name: tcp
+        port: 5432
+        targetPort: 5432
+
+ingresses:
+  grpc-ingress:
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    rules:
+      - host: kubernetes.docker.internal
+        paths:
+          - path: /
+            pathType: Prefix
+            service:
+              name: grpc-service
+              port: 50051

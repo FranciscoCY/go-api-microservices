@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: postgres_grpc
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - grpc-net
+  
+  flyway:
+    image: flyway/flyway:10
+    container_name: flyway_migrations
+    depends_on:
+      - db
+    volumes:
+      - ./migrations:/flyway/sql
+    command: -url=jdbc:postgresql://db:5432/mydb -user=postgres -password=postgres -connectRetries=30 migrate
+    networks:
+      - grpc-net
+
+  app:
+    build: .
+    container_name: go_grpc_app
+    depends_on:
+      - db
+    ports:
+      - "50051:50051"
+    networks:
+      - grpc-net
+    volumes:
+      - ./config:/app/config # monta el config.yaml para desarrollo local
+
+volumes:
+  postgres_data:
+
+networks:
+  grpc-net:
+    driver: bridge

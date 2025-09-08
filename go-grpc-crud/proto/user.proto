@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "proto/userpb";
+
+// Servicio gRPC
+service UserService {
+  rpc CreateUser (CreateUserRequest) returns (UserResponse);
+  rpc GetUser (GetUserRequest) returns (UserResponse);
+  rpc UpdateUser (UpdateUserRequest) returns (UserResponse);
+  rpc DeleteUser (DeleteUserRequest) returns (DeleteResponse);
+  rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
+}
+
+// Modelo
+message User {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+}
+
+// Requests y Responses
+message CreateUserRequest {
+  string name = 1;
+  string email = 2;
+}
+
+message GetUserRequest {
+  int64 id = 1;
+}
+
+message UpdateUserRequest {
+  int64 id = 1;
+  string name = 2;
+  string email = 3;
+}
+
+message DeleteUserRequest {
+  int64 id = 1;
+}
+
+message DeleteResponse {
+  bool success = 1;
+}
+
+message ListUsersRequest {}
+
+message ListUsersResponse {
+  repeated User users = 1;
+}
+
+message UserResponse {
+  User user = 1;
+}

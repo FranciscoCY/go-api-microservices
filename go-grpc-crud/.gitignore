@@ -1,0 +1,41 @@
+# Binaries
+/app
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binaries
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Dependency directories (vendor)
+vendor/
+
+# Logs
+*.log
+
+# IDE/editor configs
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Configuración local (NO versionar contraseñas reales)
+.env
+
+# Docker
+*.tar
+*.pid
+docker-compose.override.yml
